@@ -25,7 +25,7 @@ Routes incoming inquiries across **Telegram, WhatsApp Cloud API, Instagram DM, a
 > Unified multi-channel routing, LangChain conversation memory, strict JSON schema enforcement, and conditional CRM logging.
 
 <p align="center">
-  <img src="media/workflow_canvas_live_run.webp" alt="n8n Workflow Live Canvas Demo" width="700px" style="border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);" />
+  <img src="media/workflow_canvas_execution.webp" alt="n8n Workflow Live Canvas Demo" width="700px" style="border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);" />
 </p>
 
 ---
