@@ -12,17 +12,21 @@ Routes incoming inquiries across **Telegram, WhatsApp Cloud API, Instagram DM, a
 
 ---
 
-## 📸 Visual Demos & Architecture
+## 🎥 Interactive Live Demo & Architecture
 
-### 1. 3D Dynamic Interactive Web Chat Widget
+### 1. 3D Dynamic Interactive Web Chat (Live Demo Video)
 > Powered by Three.js WebGL particle space, real-time lead score badges, dynamic action chips, and synthesized Web Audio chime feedback.
 
-![3D Dynamic Chat Interface](media/chat_widget_screenshot.png)
+<p align="center">
+  <img src="media/chat_widget_demo.webp" alt="Nexus AI 3D Dynamic Chat Interface Live Demo" width="700px" style="border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);" />
+</p>
 
-### 2. End-to-End n8n Workflow Architecture
+### 2. End-to-End n8n Workflow Architecture (Live Canvas)
 > Unified multi-channel routing, LangChain conversation memory, strict JSON schema enforcement, and conditional CRM logging.
 
-![n8n Workflow Canvas](media/workflow_canvas.png)
+<p align="center">
+  <img src="media/workflow_canvas_demo.webp" alt="n8n Workflow Live Canvas Demo" width="700px" style="border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);" />
+</p>
 
 ---
 
