@@ -1,0 +1,13 @@
+# Ortam değişkenleri ve hassas anahtarlar
+.env
+*.env.local
+
+# İşletim sistemi ve geçici dosyalar
+.DS_Store
+Thumbs.db
+*.heic
+*.log
+
+# n8n yerel veritabanı ve yedekler
+.n8n/
+database.sqlite*

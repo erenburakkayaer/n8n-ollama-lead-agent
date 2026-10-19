@@ -1,0 +1,67 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    networks:
+      - ai_agent_net
+    # GPU acceleration (Optional: enable if NVIDIA drivers & container toolkit are installed)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-UTC}
+      - TZ=${GENERIC_TIMEZONE:-UTC}
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_SECURE_COOKIE=false
+      - N8N_CORS_ALLOWED_ORIGINS=*
+    volumes:
+      - n8n_data:/home/node/.n8n
+    networks:
+      - ai_agent_net
+    depends_on:
+      - ollama
+
+  # Free HTTPS Tunnel for external webhooks (Telegram, WhatsApp, Instagram)
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: n8n_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-}
+    networks:
+      - ai_agent_net
+    depends_on:
+      - n8n
+
+volumes:
+  ollama_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+networks:
+  ai_agent_net:
+    driver: bridge

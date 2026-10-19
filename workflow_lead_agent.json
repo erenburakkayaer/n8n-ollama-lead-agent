@@ -1,0 +1,350 @@
+{
+  "name": "Ollama Lead Qualification AI Agent (with Memory & Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Customer Message Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        340
+      ],
+      "webhookId": "lead-qualification-webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer Name: {{ $json.body.sender_name || 'Unknown' }}\nContact Info: {{ $json.body.phone || 'Not Specified' }}\nCustomer Message: {{ $json.body.message || $json.body.text || 'Hello' }}",
+        "options": {
+          "systemMessage": "=You are an expert \"Lead Qualification & Sales Assistant\" for a high-growth B2B & B2C enterprise services company.\n\nYOUR OBJECTIVE:\n1. Analyze the customer's latest incoming message along with conversational history stored in memory.\n2. Evaluate their budget status, timeframe/urgency, and purchase intent (seriousness).\n3. Draft a polite, persuasive, and consultative response.\n4. Output STRICTLY and ONLY in the specified JSON format. Do NOT wrap in extra conversational filler outside JSON.\n\nQUALIFICATION CRITERIA (is_lead_ready = true):\n- The client states a clear need or project scope (e.g. mobile app, e-commerce, custom AI, CRM).\n- Mentions a budget range or is open to receiving an official proposal/quote.\n- Has an actionable timeframe (e.g. urgent, this month, Q1/Q2).\n- If the customer is merely asking exploratory questions without scope or contact details, set is_lead_ready: false and politely prompt for missing details (budget, timeline, contact info) in reply_message.\n\nREQUIRED JSON SCHEMA:\n{\n  \"customer_name\": \"Detected name or 'Unknown'\",\n  \"contact_info\": \"Phone or email extracted (or 'None')\",\n  \"service_requested\": \"Summary of service or project requested\",\n  \"budget_status\": \"Low / Medium / High / Not Specified\",\n  \"timeframe\": \"Immediate / 1 Month / 1-3 Months / Exploratory\",\n  \"lead_score\": 85,\n  \"is_lead_ready\": true,\n  \"summary\": \"1-sentence executive summary note for the sales team\",\n  \"reply_message\": \"Professional, engaging response sent back to the customer\"\n}"
+        }
+      },
+      "id": "node_agent",
+      "name": "AI Agent (Lead Qualification)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        460,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:1.5b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "node_ollama",
+      "name": "Ollama Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        380,
+        560
+      ],
+      "credentials": {
+        "ollamaApi": {
+          "id": "local_ollama",
+          "name": "Ollama Local (http://ollama:11434)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionKey": "={{ $('Customer Message Webhook').item.json.body.sender_id || $('Customer Message Webhook').item.json.body.phone || 'default_session' }}",
+        "contextWindowLength": 10
+      },
+      "id": "node_memory",
+      "name": "Window Buffer Memory (10 Messages)",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sanitize Ollama output and parse JSON response safely\nlet rawResponse = $input.first().json.output || $input.first().json.text || $input.first().json.response || '';\nrawResponse = rawResponse.replace(/```json/gi, '').replace(/```/g, '').trim();\n\nlet parsedData = {};\ntry {\n  parsedData = JSON.parse(rawResponse);\n} catch (error) {\n  parsedData = {\n    customer_name: $('Customer Message Webhook').first().json.body.sender_name || 'Unknown',\n    contact_info: $('Customer Message Webhook').first().json.body.phone || 'None',\n    service_requested: 'General Inquiry',\n    budget_status: 'Not Specified',\n    timeframe: 'Exploratory',\n    lead_score: 25,\n    is_lead_ready: false,\n    summary: 'Model output could not be parsed as JSON',\n    reply_message: rawResponse || 'Thank you for reaching out. A representative will contact you shortly.'\n  };\n}\n\nreturn { json: parsedData };"
+      },
+      "id": "node_parser",
+      "name": "JSON Parser & Sanitizer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "lead_ready_check",
+              "leftValue": "={{ $json.is_lead_ready }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node_if",
+      "name": "Is Lead Qualified? (If)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1020,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "col_customer_name",
+              "name": "Customer Name",
+              "value": "={{ $json.customer_name }}",
+              "type": "string"
+            },
+            {
+              "id": "col_phone",
+              "name": "Contact Info",
+              "value": "={{ $json.contact_info }}",
+              "type": "string"
+            },
+            {
+              "id": "col_service",
+              "name": "Service Requested",
+              "value": "={{ $json.service_requested }}",
+              "type": "string"
+            },
+            {
+              "id": "col_budget",
+              "name": "Budget Status",
+              "value": "={{ $json.budget_status }}",
+              "type": "string"
+            },
+            {
+              "id": "col_timeframe",
+              "name": "Timeframe",
+              "value": "={{ $json.timeframe }}",
+              "type": "string"
+            },
+            {
+              "id": "col_score",
+              "name": "Lead Score",
+              "value": "={{ $json.lead_score }}",
+              "type": "number"
+            },
+            {
+              "id": "col_summary",
+              "name": "Sales Summary",
+              "value": "={{ $json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "col_date",
+              "name": "Timestamp",
+              "value": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node_prepare_sheet",
+      "name": "Format Lead Record Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1260,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "id": "node_google_sheets",
+      "name": "Google Sheets (Append Hot Lead)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1480,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"is_lead_ready\": true,\n  \"reply_message\": {{ JSON.stringify($('JSON Parser & Sanitizer').item.json.reply_message) }},\n  \"lead_score\": {{ $('JSON Parser & Sanitizer').item.json.lead_score || 0 }},\n  \"summary\": {{ JSON.stringify($('JSON Parser & Sanitizer').item.json.summary || '') }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node_reply_hot",
+      "name": "Respond to Webhook (Qualified Lead)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1720,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"info_needed\",\n  \"is_lead_ready\": false,\n  \"reply_message\": {{ JSON.stringify($('JSON Parser & Sanitizer').item.json.reply_message) }},\n  \"lead_score\": {{ $('JSON Parser & Sanitizer').item.json.lead_score || 0 }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "node_reply_followup",
+      "name": "Respond to Webhook (Follow-Up)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1720,
+        440
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Customer Message Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent (Lead Qualification)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent (Lead Qualification)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Window Buffer Memory (10 Messages)": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent (Lead Qualification)",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent (Lead Qualification)": {
+      "main": [
+        [
+          {
+            "node": "JSON Parser & Sanitizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Parser & Sanitizer": {
+      "main": [
+        [
+          {
+            "node": "Is Lead Qualified? (If)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Lead Qualified? (If)": {
+      "main": [
+        [
+          {
+            "node": "Format Lead Record Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook (Follow-Up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Lead Record Fields": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets (Append Hot Lead)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets (Append Hot Lead)": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook (Qualified Lead)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

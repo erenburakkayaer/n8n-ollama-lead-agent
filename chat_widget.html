@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nexus AI | Omnichannel Lead Qualification Assistant</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Three.js for 3D Interactive Background -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #070913;
+      --card-bg: rgba(15, 23, 42, 0.65);
+      --card-border: rgba(255, 255, 255, 0.12);
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --accent: #ec4899;
+      --cyan: #06b6d4;
+      --emerald: #10b981;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --agent-msg-bg: rgba(30, 41, 59, 0.7);
+      --user-msg-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* 3D WebGL Canvas */
+    #webgl-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Ambient Glow Blobs */
+    .glow-blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: 0.45;
+      z-index: 1;
+      pointer-events: none;
+      animation: floatGlow 12s infinite alternate ease-in-out;
+    }
+    .blob-1 {
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, #4f46e5, transparent);
+      top: -100px;
+      left: -100px;
+    }
+    .blob-2 {
+      width: 450px;
+      height: 450px;
+      background: radial-gradient(circle, #ec4899, transparent);
+      bottom: -80px;
+      right: -80px;
+      animation-delay: -6s;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(60px, 40px) scale(1.15); }
+    }
+
+    /* 3D Perspective Card Wrapper */
+    .card-wrapper {
+      perspective: 1200px;
+      z-index: 10;
+      width: 100%;
+      max-width: 460px;
+      padding: 16px;
+    }
+
+    .chat-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      height: 720px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 
+        0 30px 60px -12px rgba(0, 0, 0, 0.75),
+        0 0 50px rgba(99, 102, 241, 0.2),
+        inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+      transition: transform 0.15s ease-out, box-shadow 0.3s ease;
+      transform-style: preserve-3d;
+      position: relative;
+    }
+
+    .chat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+      z-index: 2;
+    }
+
+    /* Header */
+    .chat-header {
+      padding: 20px 22px;
+      background: rgba(15, 23, 42, 0.7);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 5;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .avatar-3d {
+      width: 48px;
+      height: 48px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 8px 20px rgba(99, 102, 241, 0.45);
+      position: relative;
+      animation: floatIcon 3.5s infinite ease-in-out;
+    }
+
+    @keyframes floatIcon {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .header-details h1 {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      font-family: 'Space Grotesk', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-details .pro-badge {
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6);
+      text-transform: uppercase;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: #34d399;
+      font-weight: 500;
+      margin-top: 3px;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseAnimation 2s infinite;
+    }
+
+    @keyframes pulseAnimation {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.7); opacity: 0.5; }
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .glass-btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+    .glass-btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      transform: translateY(-2px);
+    }
+
+    /* Chat Messages Viewport */
+    .chat-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .chat-body::-webkit-scrollbar {
+      width: 5px;
+    }
+    .chat-body::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+    }
+
+    /* Message Bubbles */
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      animation: msgAppear 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes msgAppear {
+      from { opacity: 0; transform: translateY(12px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .msg-row.agent {
+      align-items: flex-start;
+    }
+    .msg-row.user {
+      align-items: flex-end;
+    }
+
+    .bubble {
+      max-width: 85%;
+      padding: 14px 18px;
+      font-size: 14px;
+      line-height: 1.55;
+      border-radius: 20px;
+      position: relative;
+      word-wrap: break-word;
+    }
+
+    .msg-row.agent .bubble {
+      background: var(--agent-msg-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom-left-radius: 6px;
+      color: #f1f5f9;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+    }
+
+    .msg-row.user .bubble {
+      background: var(--user-msg-gradient);
+      border-bottom-right-radius: 6px;
+      color: #ffffff;
+      font-weight: 500;
+      box-shadow: 0 8px 25px rgba(79, 70, 229, 0.35);
+    }
+
+    .msg-time {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      padding: 0 4px;
+    }
+
+    /* Lead Metric Card */
+    .lead-metric-card {
+      margin-top: 10px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      animation: glowGlow 2.5s infinite alternate;
+    }
+
+    .lead-metric-card.warm {
+      background: rgba(99, 102, 241, 0.1);
+      border-color: rgba(99, 102, 241, 0.35);
+    }
+
+    @keyframes glowGlow {
+      from { box-shadow: 0 0 10px rgba(16, 185, 129, 0.1); }
+      to { box-shadow: 0 0 20px rgba(16, 185, 129, 0.25); }
+    }
+
+    .score-circle {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.25);
+      border: 2px solid #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 11px;
+      color: #34d399;
+    }
+    .score-circle.warm {
+      background: rgba(99, 102, 241, 0.25);
+      border-color: #6366f1;
+      color: #818cf8;
+    }
+
+    .lead-metric-text {
+      flex: 1;
+    }
+    .lead-metric-text strong {
+      display: block;
+      color: #fff;
+      font-size: 12px;
+      margin-bottom: 2px;
+    }
+    .lead-metric-text span {
+      color: var(--text-muted);
+      font-size: 11px;
+    }
+
+    /* Quick Prompt Chips */
+    .quick-chips-wrapper {
+      padding: 6px 18px 12px;
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .quick-chips-wrapper::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip-btn {
+      white-space: nowrap;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 12px;
+      color: #cbd5e1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.25s ease;
+      backdrop-filter: blur(8px);
+    }
+    .chip-btn:hover {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: #818cf8;
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Typing Waves */
+    .typing-wave {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      padding: 12px 18px;
+      background: var(--agent-msg-bg);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      width: fit-content;
+      margin-bottom: 10px;
+    }
+
+    .wave-dot {
+      width: 7px;
+      height: 7px;
+      background: #818cf8;
+      border-radius: 50%;
+      animation: waveHop 1.3s infinite ease-in-out;
+    }
+    .wave-dot:nth-child(2) { animation-delay: 0.18s; }
+    .wave-dot:nth-child(3) { animation-delay: 0.36s; }
+
+    @keyframes waveHop {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+      30% { transform: translateY(-7px); opacity: 1; }
+    }
+
+    /* Footer & Input Bar */
+    .chat-footer {
+      padding: 16px 20px;
+      background: rgba(15, 23, 42, 0.85);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    .input-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 18px;
+      padding: 6px 8px 6px 18px;
+      transition: all 0.25s;
+    }
+
+    .input-box:focus-within {
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+    }
+
+    .chat-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #fff;
+      font-size: 14px;
+    }
+    .chat-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .send-action-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.25s;
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+    .send-action-btn:hover {
+      transform: scale(1.08) rotate(-4deg);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.6);
+    }
+    .send-action-btn:active {
+      transform: scale(0.96);
+    }
+
+    .send-action-btn svg {
+      width: 19px;
+      height: 19px;
+      fill: currentColor;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Three.js Ambient Particle Space -->
+  <canvas id="webgl-bg"></canvas>
+
+  <div class="glow-blob blob-1"></div>
+  <div class="glow-blob blob-2"></div>
+
+  <!-- 3D Interactive Chat Card -->
+  <div class="card-wrapper" id="cardWrapper">
+    <div class="chat-card" id="chatCard">
+      
+      <!-- Top Bar -->
+      <div class="chat-header">
+        <div class="brand-section">
+          <div class="avatar-3d">✨</div>
+          <div class="header-details">
+            <h1>Nexus Lead AI <span class="pro-badge">PRO</span></h1>
+            <div class="status-pill">
+              <span class="pulse-dot"></span>
+              <span id="channelStatus">Ollama Qwen 2.5 • Active</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="header-controls">
+          <button class="glass-btn-icon" id="clearChatBtn" title="Clear Chat History">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Messages Stream -->
+      <div class="chat-body" id="chatBody">
+        <div class="msg-row agent">
+          <div class="bubble">
+            Hello! I am your AI Solutions and Project Advisor. 🚀<br><br>
+            Are you looking to build a new web application, mobile app, or custom AI automation? Let's discuss your project scope and budget!
+          </div>
+          <span class="msg-time">Just now</span>
+        </div>
+
+        <div class="typing-wave" id="typingWave">
+          <span class="wave-dot"></span>
+          <span class="wave-dot"></span>
+          <span class="wave-dot"></span>
+        </div>
+      </div>
+
+      <!-- Quick Action Chips -->
+      <div class="quick-chips-wrapper">
+        <button class="chip-btn" onclick="sendQuickPrompt('We need a custom mobile application for iOS & Android with a $15,000 budget.')">
+          📱 Mobile App Project
+        </button>
+        <button class="chip-btn" onclick="sendQuickPrompt('Looking for an automated AI CRM and customer support solution.')">
+          🛒 AI CRM & Automation
+        </button>
+        <button class="chip-btn" onclick="sendQuickPrompt('What are your service tiers, pricing models, and delivery timelines?')">
+          💰 Request Proposal
+        </button>
+      </div>
+
+      <!-- Footer Input -->
+      <div class="chat-footer">
+        <form id="chatForm" class="input-box">
+          <input 
+            type="text" 
+            id="userInput" 
+            class="chat-input" 
+            placeholder="Type your message or project requirements..." 
+            autocomplete="off" 
+            required 
+          />
+          <button type="submit" class="send-action-btn" id="sendBtn" title="Send Message">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Three.js 3D Dynamic Background ---
+    const canvas = document.getElementById('webgl-bg');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // 3D Particles Mesh
+    const particlesCount = 380;
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(particlesCount * 3);
+    const colors = new Float32Array(particlesCount * 3);
+
+    for (let i = 0; i < particlesCount * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 25;
+      positions[i + 1] = (Math.random() - 0.5) * 25;
+      positions[i + 2] = (Math.random() - 0.5) * 25;
+
+      colors[i] = 0.4 + Math.random() * 0.3;     // R
+      colors[i + 1] = 0.3 + Math.random() * 0.4; // G
+      colors[i + 2] = 0.95;                      // B
+    }
+
+    geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+    const material = new THREE.PointsMaterial({
+      size: 0.14,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.75
+    });
+
+    const particleSystem = new THREE.Points(geometry, material);
+    scene.add(particleSystem);
+
+    // 3D Torus Wireframe Ring
+    const torusGeo = new THREE.TorusGeometry(8, 2.5, 16, 100);
+    const torusMat = new THREE.MeshBasicMaterial({
+      color: 0x4f46e5,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.12
+    });
+    const torus = new THREE.Mesh(torusGeo, torusMat);
+    scene.add(torus);
+
+    camera.position.z = 14;
+
+    let mouseX = 0;
+    let mouseY = 0;
+    window.addEventListener('mousemove', (e) => {
+      mouseX = (e.clientX - window.innerWidth / 2) * 0.0008;
+      mouseY = (e.clientY - window.innerHeight / 2) * 0.0008;
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      particleSystem.rotation.y += 0.0012;
+      particleSystem.rotation.x += 0.0008;
+      torus.rotation.x += 0.002;
+      torus.rotation.y += 0.003;
+
+      camera.position.x += (mouseX * 5 - camera.position.x) * 0.05;
+      camera.position.y += (-mouseY * 5 - camera.position.y) * 0.05;
+      camera.lookAt(scene.position);
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- 2. 3D Tilt Card Physics ---
+    const card = document.getElementById('chatCard');
+    const wrapper = document.getElementById('cardWrapper');
+
+    wrapper.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left - rect.width / 2;
+      const y = e.clientY - rect.top - rect.height / 2;
+      const rotX = (y / (rect.height / 2)) * -6;
+      const rotY = (x / (rect.width / 2)) * 6;
+      card.style.transform = `rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg)`;
+    });
+
+    wrapper.addEventListener('mouseleave', () => {
+      card.style.transform = `rotateX(0deg) rotateY(0deg)`;
+    });
+
+    // --- 3. Web Audio Synthesis ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq = 600, duration = 0.08, type = 'sine') {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    // --- 4. Chat & n8n Integration ---
+    const chatBody = document.getElementById('chatBody');
+    const chatForm = document.getElementById('chatForm');
+    const userInput = document.getElementById('userInput');
+    const typingWave = document.getElementById('typingWave');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+
+    let sessionId = localStorage.getItem('lead_agent_session_id');
+    if (!sessionId) {
+      sessionId = 'web_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('lead_agent_session_id', sessionId);
+    }
+
+    const TEST_WEBHOOK = 'http://localhost:5678/webhook-test/lead-chat';
+    const PROD_WEBHOOK = 'http://localhost:5678/webhook/lead-chat';
+
+    function addMessage(text, sender, meta = null) {
+      const row = document.createElement('div');
+      row.className = `msg-row ${sender}`;
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = text.replace(/\n/g, '<br>');
+      row.appendChild(bubble);
+
+      if (meta && sender === 'agent') {
+        const metric = document.createElement('div');
+        const isHot = meta.is_lead_ready;
+        metric.className = `lead-metric-card ${isHot ? '' : 'warm'}`;
+
+        const score = meta.lead_score || (isHot ? 88 : 35);
+        metric.innerHTML = `
+          <div class="score-circle ${isHot ? '' : 'warm'}">${score}</div>
+          <div class="lead-metric-text">
+            <strong>${isHot ? '🔥 Qualified Lead (Ready to Close)' : 'ℹ️ Lead Discovery Stage'}</strong>
+            <span>${meta.summary || (isHot ? 'Logged to Google Sheets and routed to sales.' : 'Collecting scope details')}</span>
+          </div>
+        `;
+        row.appendChild(metric);
+      }
+
+      const time = document.createElement('span');
+      time.className = 'msg-time';
+      const now = new Date();
+      time.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      row.appendChild(time);
+
+      chatBody.insertBefore(row, typingWave);
+      chatBody.scrollTop = chatBody.scrollHeight;
+
+      if (sender === 'user') playBeep(520, 0.07);
+      if (sender === 'agent') playBeep(880, 0.12);
+    }
+
+    async function handleMessageSend(text) {
+      if (!text.trim()) return;
+
+      addMessage(text, 'user');
+      userInput.value = '';
+      typingWave.style.display = 'flex';
+      chatBody.scrollTop = chatBody.scrollHeight;
+
+      const payload = {
+        sender_id: sessionId,
+        sender_name: "Web Prospect",
+        phone: "Web Chat",
+        message: text
+      };
+
+      try {
+        let response = await fetch(PROD_WEBHOOK, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => null);
+
+        if (!response || !response.ok) {
+          response = await fetch(TEST_WEBHOOK, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const data = await response.json();
+        typingWave.style.display = 'none';
+
+        if (data && data.reply_message) {
+          addMessage(data.reply_message, 'agent', data);
+        } else {
+          addMessage("Thank you for your message. We have received your request!", 'agent');
+        }
+      } catch (err) {
+        typingWave.style.display = 'none';
+        addMessage("⚠️ Unable to reach n8n. Please ensure 'Test workflow' is active or workflow is published.", 'agent');
+      }
+    }
+
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      handleMessageSend(userInput.value);
+    });
+
+    function sendQuickPrompt(promptText) {
+      handleMessageSend(promptText);
+    }
+
+    clearChatBtn.addEventListener('click', () => {
+      chatBody.querySelectorAll('.msg-row').forEach((el, index) => {
+        if (index > 0) el.remove();
+      });
+      playBeep(350, 0.05);
+    });
+  </script>
+</body>
+</html>
