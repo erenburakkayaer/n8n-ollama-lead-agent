@@ -6,7 +6,7 @@
 [![Privacy](https://img.shields.io/badge/Privacy-100%25_Local_&_Zero_Telemetry-10B981?style=for-the-badge)](https://github.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-An enterprise-ready, open-source, and **100% local AI Sales & Lead Qualification Agent**. Built with **n8n**, **Ollama (`qwen2.5:1.5b` / `llama3`)**, **LangChain Buffer Memory**, and automated **Google Sheets CRM synchronization**.
+An enterprise-ready, open-source, and **100% local AI Sales & Lead Qualification Agent**. Built with **n8n**, **Ollama (`llama3.2:3b`)**, **LangChain Buffer Memory**, and automated **Google Sheets CRM synchronization**.
 
 Routes incoming inquiries across **Telegram, WhatsApp Cloud API, Instagram DM, and Web Chat** into a unified conversational reasoning pipeline.
 
@@ -47,7 +47,7 @@ flowchart TD
 
     subgraph Brain ["Local AI Reasoning Engine"]
         MEM[("🧠 Window Buffer Memory\n(Last 10 Messages Context)")]
-        LLM["🦙 Ollama Local Model\n(qwen2.5 / llama3 @ http://ollama:11434)"]
+        LLM["🦙 Ollama Local Model\n(llama3.2:3b @ http://ollama:11434)"]
         AGENT["🤖 AI Agent Node\n(Sales Qualification System Prompt)"]
         PARSE["⚙️ JSON Sanitizer & Validator"]
     end
@@ -124,9 +124,9 @@ docker compose ps
 ```
 
 ### 4. Pull the Local LLM
-Pull your model of choice inside the Ollama container (recommended: `qwen2.5:1.5b` or `qwen2.5:7b` for superior multilingual reasoning and JSON accuracy):
+Pull your model of choice inside the Ollama container (recommended: `llama3.2:3b`; larger models give better reasoning and JSON accuracy):
 ```bash
-docker exec -it ollama ollama pull qwen2.5:1.5b
+docker exec -it ollama ollama pull llama3.2:3b
 ```
 
 ---
@@ -142,7 +142,7 @@ docker exec -it ollama ollama pull qwen2.5:1.5b
    - [`workflow_lead_agent.json`](workflow_lead_agent.json) *(Standard Web & Lead Capture)*
    - or [`workflow_omnichannel_lead_agent.json`](workflow_omnichannel_lead_agent.json) *(Full Omnichannel: TG + WA + IG + Web)*
 4. Configure credentials:
-   - **Ollama Chat Model:** Set **Base URL** to `http://ollama:11434` and select `qwen2.5:1.5b`.
+   - **Ollama Chat Model:** Set **Base URL** to `http://ollama:11434` and select `llama3.2:3b`.
    - **Google Sheets:** Connect your Google account and paste your destination spreadsheet URL.
 
 ---

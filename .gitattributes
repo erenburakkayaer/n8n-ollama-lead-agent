@@ -1,0 +1,4 @@
+# Make language stats reflect the n8n workflows (JSON) instead of the single HTML demo UI
+*.json linguist-detectable=true
+chat_widget.html linguist-documentation=true
+media/** linguist-generated=true
