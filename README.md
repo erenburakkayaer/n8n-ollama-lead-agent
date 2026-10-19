@@ -155,6 +155,12 @@ When setting up your Google Sheet, define the following headers in **Row 1 (A1:H
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Customer Name** | **Contact Info** | **Service Requested** | **Budget Status** | **Timeframe** | **Lead Score** | **Sales Summary** | **Timestamp** |
 
+Qualified leads are appended automatically as new rows (illustrative example with sample data):
+
+<p align="center">
+  <img src="media/google_sheets_crm_example.jpg" alt="Google Sheets CRM example with qualified leads" width="800px" />
+</p>
+
 ---
 
 ## 🧪 Testing via Webhook
